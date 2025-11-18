@@ -4,6 +4,7 @@ import random
 from kivy.config import Config
 
 Config.set('graphics', 'fullscreen', 'auto')
+Config.set('input', 'tuio_listener', 'tuio,127.0.0.1:3333')
 
 from kivy.app import App
 from kivy.uix.button import Button
@@ -38,7 +39,6 @@ class Menu(ModalView):
         self.background_color = (0, 0, 0, 0.85)  # Semi-transparent dark
         self.background_color = (0, 0, 0, 0.85)  # Semi-transparent dark background background
         self.background = os.path.join(app.assets_path, "menubackground.png")
-
         #Visual setup
         layout = FloatLayout()
         title_label = Label(
