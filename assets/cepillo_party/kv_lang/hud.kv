@@ -1,0 +1,137 @@
+#:kivy 2.3.1
+
+<ScoreLabel@Label>:
+    font_name: 'fun_font'
+    font_size: '28sp'
+    halign: 'left'
+    valign: 'middle'
+    color: (1, 0.922, 0.6, 1)
+    size_hint: (0.3, None)
+    height: 50
+    text_size: self.size
+
+<NameLabel@Label>:
+    font_name: 'fun_font'
+    font_size: '28sp'
+    halign: 'right'
+    valign: 'middle'
+    color: (1, 0.922, 0.6, 1)
+    size_hint: (0.3, None)
+    height: 50
+    text_size: self.size
+
+<Menu>:
+    size_hint: (1, 1)
+    auto_dismiss: False
+    background_color: (0, 0, 0, 0.85)
+    canvas.before:
+        Rectangle:
+            texture: root.bg_texture
+            size: self.size
+            pos: self.pos
+
+    FloatLayout:
+        # Welcome/Title label
+        Label:
+            id: title_label
+            text: 'CEPILLO PARTY'
+            font_size: '40sp'
+            size_hint: (1, 0.3)
+            pos_hint: {'center_x': 0.5, 'top': 0.95}
+            color: (1, 1, 1, 1)
+        
+        # Play button (centered)
+        Button:
+            id: play_button
+            size_hint: (0.4, 0.5)
+            pos_hint: {'center_x': 0.5, 'center_y': 0.4}
+            background_normal: ''
+            background_color: (1, 1, 1, 0)
+            canvas:
+                Rectangle:
+                    texture: root.play_button_texture
+                    size: self.size
+                    pos: self.pos
+            on_press: root._start_game()
+        
+        # Ranking button
+        Button:
+            id: ranking_button
+            size_hint: (0.18, 0.25)
+            pos_hint: {'center_x': 0.9, 'center_y': 0.85}
+            background_normal: ''
+            background_color: (1, 1, 1, 0)
+            canvas:
+                Rectangle:
+                    texture: root.ranking_button_texture
+                    size: self.size
+                    pos: self.pos
+            on_press: root._show_ranking()
+
+        # Day Ranking Box
+        BoxLayout:
+            id: day_ranking_box
+            orientation: 'vertical'
+            size_hint: (0.2, 0.8)
+            pos_hint: {'center_x': 0.18, 'center_y': 0.7}
+            spacing: 10
+            padding: 10
+
+            Label:
+                id: day_ranking_title
+                text: 'TOP DEL DIA'
+                font_name: 'fun_font'
+                font_size: '40sp'
+                size_hint_y: None
+                height: 60
+                color: (0.823, 0.9, 0.121, 1)
+                bold: True
+
+            GridLayout:
+                id: day_ranking_grid
+                cols: 2
+                spacing: [20, 10]
+                size_hint_y: None
+                height: 250
+                # Rows will be populated from Python code
+
+
+<HighScoreLabel@Label>:
+    font_name: 'fun_font'
+    font_size: '35sp'
+    halign: 'left'
+    valign: 'middle'
+    color: (0, 0.29, 0.6785, 1)
+    size_hint: (0.3, None)
+    height: 50
+    text_size: self.size
+
+<HighNameLabel@Label>:
+    font_name: 'fun_font'
+    font_size: '35sp'
+    halign: 'right'
+    valign: 'middle'
+    color: (0, 0.29, 0.6785, 1)
+    size_hint: (0.3, None)
+    height: 50
+    text_size: self.size
+
+<Ranking>:
+    size_hint: (0.5, 0.9)
+    pos_hint: {"center_x": 0.5, "center_y": 0.5}
+    overlay_color: (0, 0, 0, 0.9)
+    
+    FloatLayout:
+        Image:
+            id: ranking_bg
+            allow_stretch: True
+            keep_ratio: False
+            size_hint: (1, 1)
+            pos_hint: {'x': 0, 'y': 0}
+        
+        GridLayout:
+            id: highscores_grid
+            cols: 2
+            spacing: [20, 10]
+            size_hint: (0.8, 0.55)
+            pos_hint: {'center_x': 0.5, 'center_y': 0.5}

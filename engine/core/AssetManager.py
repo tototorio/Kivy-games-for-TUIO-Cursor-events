@@ -7,26 +7,28 @@ class AssetManager:
 
         # 1. Unified Storage Dictionaries
         self.images = {}
-        self.atlases = {} 
         self.sounds = {}
         self.configs = {}
         self.kv_lang = {}
+        self.fonts = {}
+        self.atlas = None
         
         # 2. The Configuration Map 
         self._type_map = {
-            'image':   {'folder': 'images',  'ext': '.png',   'store': self.images,   'loader': lambda p: Image(source=p)},
-            'atlas':   {'folder': 'atlases', 'ext': '.atlas', 'store': self.atlases,  'loader': lambda p: Atlas(p)},
+            'image':   {'folder': 'images',  'ext': '.png',   'store': self.images,   'loader': lambda p: CoreImage(p)},
             'sound':   {'folder': 'sounds',  'ext': '.mp3',   'store': self.sounds,   'loader': SoundLoader.load},
-            'config':  {'folder': 'config',  'ext': '.json',  'store': self.configs,  'loader': self._load_json},
-            'kv_lang': {'folder': 'kv',      'ext': '.kv',    'store': self.kv_lang,  'loader': lambda p: p} # KV just stores the path
+            'config':  {'folder': 'config',  'ext': '.json',  'store': self.configs,  'loader': lambda p: p}, # Config just stores the path, we load it on demand
+            'kv_lang': {'folder': 'kv_lang',      'ext': '.kv',    'store': self.kv_lang,  'loader': lambda p: p}, # KV just stores the path
+            'font':    {'folder': 'fonts',   'ext': '.ttf',   'store': self.fonts,    'loader': lambda p: self._register_font(p)}
         }
 
         # 3. Load all assets at initialization
         self.load_all_assets('image')
-        self.load_all_assets('atlas')
         self.load_all_assets('sound')
         self.load_all_assets('config')
         self.load_all_assets('kv_lang')
+        self.load_all_assets('font')
+        self._load_atlas()
 
     def _load_json(self, path):
         """Helper for JSON loading"""
@@ -51,14 +53,7 @@ class AssetManager:
         extension = self._type_map[asset_type]['ext']
         
         for item in os.listdir(path_root):
-            if asset_type == 'atlas':
-                # 'item' is the folder name (which is also our key)
-                item_path = os.path.join(path_root, item)
-                if os.path.isdir(item_path):
-                    self.load_asset(item, asset_type)
-            else:
-                # Normal flat file handling
-                if item.endswith(extension):
+            if item.endswith(extension):
                     key = os.path.splitext(item)[0]
                     self.load_asset(key, asset_type)
     
@@ -72,13 +67,7 @@ class AssetManager:
             raise ValueError(f"Unknown asset type: {asset_type}")
             
         config = self._type_map[asset_type]
-        # 1. Handle the nested folder structure for atlases
-        if asset_type == 'atlas':
-            # Builds: root_path / key / key.atlas
-            path = os.path.join(self._get_asset_path(asset_type), key, f"{key}{config['ext']}")
-        else:
-            # Builds: root_path / key.png
-            path = os.path.join(self._get_asset_path(asset_type), f"{key}{config['ext']}")
+        path = os.path.join(self._get_asset_path(asset_type), f"{key}{config['ext']}")
         
         if not os.path.isfile(path):
             raise FileNotFoundError(f"Asset not found: {path}")
@@ -91,12 +80,8 @@ class AssetManager:
         return asset
     
     def unload_assets(self):
-        for key in self.images:
-            Cache.remove('kv.image', key)
-            
-        # Atlas resources naturally clear when dropped, but clear Cache just in case
-        for key in self.atlases:
-            Cache.remove('kv.atlas', key)
+        for image in self.images.values():
+            image.release()  # Release texture memory
 
         for sound in self.sounds.values():
             if sound:
@@ -107,3 +92,14 @@ class AssetManager:
         for config in self._type_map.values():
             config['store'].clear()
     
+    def _register_font(self, path):
+        """Helper to register a font with Kivy"""
+        font_name = os.path.splitext(os.path.basename(path))[0]
+        LabelBase.register(name=font_name, fn_regular=path)
+        return path
+
+    def _load_atlas(self):
+        """Load the atlas configuration if it exists"""
+        atlas_path = os.path.join(self.assets_path, "atlas/animations.atlas")
+        if os.path.isfile(atlas_path):
+            self.atlas = Atlas(atlas_path)

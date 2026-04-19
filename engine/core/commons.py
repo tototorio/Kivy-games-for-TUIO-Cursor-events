@@ -14,11 +14,15 @@ from kivy.uix.label import Label
 from kivy.uix.image import Image
 from kivy.uix.widget import Widget
 from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.modalview import ModalView
 from kivy.core.audio import SoundLoader
 from kivy.core.window import Window
 from kivy.core.text import LabelBase
+from kivy.core.image import Image as CoreImage
 from kivy.cache import Cache
 from kivy.atlas import Atlas
+from kivy.lang import Builder
+from kivy.event import EventDispatcher
 
 
 Config.set('input', 'tuio_listener', 'tuio,127.0.0.1:3333')
