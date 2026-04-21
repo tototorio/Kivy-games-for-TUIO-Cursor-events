@@ -1,16 +1,25 @@
 #:kivy 2.3.1
-
 <CepilloParty>:
+
     FloatLayout:
         id: game_layout
         
         Image:
-            texture: root.asset_m.get_asset("game_background", "image").texture
+            id: background_image
             allow_stretch: True
             keep_ratio: False
         
+        FloatLayout:
+            id: teeth_filth_layout
+            size_hint: (1, 1)
+
+        Image:
+            id: lips_layer
+            allow_stretch: True
+            keep_ratio: False
+            
         Label:
-            id: time_label
+            id: timer_label
             text: "TIEMPO"
             font_size: '30sp'
             size_hint: (0.3, 0.1)
@@ -18,10 +27,31 @@
             color: (1, 1, 1, 1)
         
         Button:
-            id: menu_button
+            id: back_to_menu_button
             text: 'MENU'
             size_hint: (None, None)
             size: (100, 50)
             pos_hint: {'x': 0.01, 'top': 0.99}
             background_color: (0.8, 0.2, 0.2, 0.8)
             on_press: root._open_menu(self)
+    
+    BoxLayout:
+        id: loading_layout
+
+        canvas.before:
+            Color:
+                rgba: (0, 0, 0, 1)
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        opacity: 1
+        size_hint: (1, 1)
+        orientation: 'vertical'
+        spacing: 20
+        padding: 20
+
+        Label:
+            text: 'Cargando...'
+            font_size: '48sp'
+            color: (0.2, 0.6, 1, 1)

@@ -1,0 +1,50 @@
+#:kivy 2.3.1
+
+<AppMenu>:
+    
+    # Main layout
+    BoxLayout:
+        orientation : 'vertical'
+        padding : 20
+        spacing : 20
+        
+        # Game title
+        BoxLayout:
+            size_int_y : 0.25
+            padding: 10
+
+            Label:
+                text : 'Piso interactivo'
+                font_size : '50sp'
+                bold : True
+                color : (0.2, 0.6, 1, 1)
+
+        # Buttons layout
+        
+        # Cepillo party button
+        Button:
+            text : 'CEPILLO PARTY'
+            size_hint_y : None
+            height : 100
+            background_color : (0.3, 0.7, 0.3, 1)  # Green
+            font_size :'28sp'
+            on_press : root.play_teeth()
+        
+        # Second game button
+        Button:
+            text : 'JUEGO 2'
+            size_hint_y : None
+            height : 100
+            background_color : (0.7, 0.3, 0.3, 1)  # Red
+            font_size :'28sp'
+
+        # Footer with instructions
+        BoxLayout:
+            size_hint_y : 0.15
+        
+            Label:
+                text : 'Selecciona un juego para comenzar'
+                font_size : '16sp'
+                color : (0.7, 0.7, 0.7, 1)
+                italic : True
+        

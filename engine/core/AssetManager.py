@@ -11,6 +11,7 @@ class AssetManager:
         self.configs = {}
         self.kv_lang = {}
         self.fonts = {}
+        self.animations = {} # For storing atlas animations
         self.atlas = None
         
         # 2. The Configuration Map 
@@ -103,3 +104,35 @@ class AssetManager:
         atlas_path = os.path.join(self.assets_path, "atlas/animations.atlas")
         if os.path.isfile(atlas_path):
             self.atlas = Atlas(atlas_path)
+            self._process_atlas_animations()
+        else:
+            print(f"No atlas found at {atlas_path}, skipping atlas loading.")
+
+    def _process_atlas_animations(self):
+        """
+        Groups atlas textures by their prefix and sorts them numerically.
+        Example: 'brush_01', 'brush_02' -> self.animations['brush'] = [tex, tex]
+        """
+        if not self.atlas:
+            return
+
+        # 1. Group keys by prefix (everything before the trailing numbers/extension)
+        groups = {}
+        for key in self.atlas.textures.keys():
+            # Regex to find the name part and the number part
+            match = re.match(r"(.+?)[_-]?(\d+)$", key)
+            if match:
+                prefix, frame_num = match.groups()
+                if prefix not in groups:
+                    groups[prefix] = []
+                groups[prefix].append((int(frame_num), self.atlas[key]))
+            else:
+                # If it doesn't end in a number, treat it as a static image
+                pass
+
+        # 2. Sort each group by frame number and store the textures
+        for prefix, frames in groups.items():
+            # Sort by the integer frame number we stored in the tuple
+            frames.sort(key=lambda x: x[0])
+            # Extract just the texture objects into a clean list
+            self.animations[prefix] = [f[1] for f in frames]

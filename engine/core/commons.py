@@ -2,6 +2,8 @@ import os
 import sys
 import json
 import random
+import re
+from enum import Enum
 from kivy.config import Config
 from kivy.app import App
 from kivy.clock import Clock
@@ -38,29 +40,63 @@ CONFIG_PATH = os.path.join(BASE_PATH, "config")
 
 # Common classes
 
-class TUIOButton(Widget):
-    def __init__(self, normalized_coords, **kwargs):
+class GracePeriodManager:
+    """Manages grace period logic independently"""
+    
+    def __init__(self, duration=0.3):
+        self.duration = duration
+        self.pending_reset = None
+    
+    def is_active(self) -> bool:
+        """Check if grace period is currently active"""
+        return self.pending_reset is not None
+    
+    def start(self, on_expire_callback=None) -> None:
+        """Start grace period. Calls callback when it expires."""
+        if self.pending_reset:
+            self.cancel()  # Cancel any existing grace
         
-        super().__init__(**kwargs)
+        self.pending_reset = Clock.schedule_once(
+            lambda dt: self._on_expire(on_expire_callback),
+            self.duration
+        )
+    
+    def cancel(self) -> None:
+        """Cancel active grace period"""
+        if self.pending_reset:
+            Clock.unschedule(self.pending_reset)
+            self.pending_reset = None
+    
+    def _on_expire(self, callback):
+        """Called when grace period expires"""
+        self.pending_reset = None
+        if callback:
+            callback()
+
+
+class TUIOButton(Widget):
+    def __init__(self, normalized_coords, use_grace: bool, **kwargs):
+        
+        
         
         # Configuration
         self.coords = normalized_coords
         self.debug = True
-        self.use_grace = True # Whether to allow brief cursor exits without resetting
-
-        # Grace system
-        self.grace_period = 0.3 # Defines time limit for cursor to briefly leave button area without resetting
-        self.pending_reset = None # Schedule event for resetting cursor after grace period
-        self.dt = 0 # Used for pending reset timing
-
+        self.use_grace = use_grace
+        
+        # Grace system (extracted to manager)
+        self.grace = GracePeriodManager(duration=0.3)
+        
         # State
         self.cursor_inside = None
-
+        
         # Callbacks
         self.on_touch_down_callback = None
         self.on_touch_move_callback = None
         self.on_touch_up_callback = None
         self.on_reset_callback = None
+
+        super().__init__(**kwargs)
 
         
     def _normalized_to_pixels(self, x_norm, y_norm):
@@ -105,40 +141,42 @@ class TUIOButton(Widget):
     def on_touch_down(self, touch):
         """Handles when a TUIO cursor enters the screen"""
         
-        # If new cursor, check for grace period
-        if self.cursor_inside != None and self.cursor_inside != touch.uid:
-            if self.use_grace and self.pending_reset is None:
-                # If no grace, ignore new cursors
-                return False
-            
         # Ignore if not inside
         if not self._point_inside_polygon(touch.x, touch.y):
-            return False
-         
-        # Register cursor
-        self._handle_grace(touch)
+            return
+        
+        # If new cursor, check for grace period
+        if self.cursor_inside != None and self.cursor_inside != touch.uid:
+            if self.use_grace and self.grace.is_active():
+                return
+            
+        # Cancel grace if re-entering during grace period
+        if self.grace.is_active():
+            self.grace.cancel()
+            if self.debug:
+                print(f"[DEBUG] Cursor {touch.uid} re-entered, grace canceled")
+        
         was_empty = self.cursor_inside is None
         self.cursor_inside = touch.uid
         
         if self.debug and was_empty:
             print(f"[DEBUG] Cursor {touch.uid} registered (first touch)")
         
-        # Call callback if set
         if self.on_touch_down_callback:
             try:
                 self.on_touch_down_callback(touch)
             except Exception as e:
                 print(f"[ERROR] on_touch_down_callback failed: {e}")
-
-        return False
+        
+        return
     
     def on_touch_move(self, touch):
         """Called when a TUIO cursor MOVES"""
-        # If new cursor, check for grace period
+        
+        # If there is a cursor insode and it's not the same one, check grace
         if self.cursor_inside != None and self.cursor_inside != touch.uid:
-            if self.use_grace and self.pending_reset is None:
-                # If no grace, ignore new cursors
-                return False
+            if self.use_grace and self.grace.is_active():
+                return
         
         # Check if cursor is inside polygon
         if not self._point_inside_polygon(touch.x, touch.y):
@@ -146,78 +184,64 @@ class TUIOButton(Widget):
                 # Cursor just left the polygon
                 self.cursor_inside = None
                 
-                if self.debug:
-                    print(f"[DEBUG] Cursor {touch.uid} left polygon, grace period starting")
+                if self.use_grace:
+                    self.grace.start(on_expire_callback=self._on_grace_expire)
 
+                    if self.debug:
+                        print(f"[DEBUG] Cursor {touch.uid} left polygon, grace period starting")
+                
                 if self.on_touch_up_callback:
                     try:
                         self.on_touch_up_callback(touch)
                     except Exception as e:
                         print(f"[ERROR] on_touch_up_callback failed: {e}")
+            
+            return
         
-        # Register cursor
         self.cursor_inside = touch.uid
-        self._handle_grace(touch)
-
-        # Call callback if set
+        
         if self.on_touch_move_callback:
             try:
                 self.on_touch_move_callback(touch)
             except Exception as e:
                 print(f"[ERROR] on_touch_move_callback failed: {e}")
-            
-        return False
+        
+        return
     
     def on_touch_up(self, touch):
         """Called when a cursor LEAVES the screen"""
-        # Just checks for the cursor that was inside.
-        # This also works when cursor_inside = None
+        
         if touch.uid != self.cursor_inside:
-            return False
+            return
         
         if self.debug:
-            print(f"[DEBUG] Cursor {touch.uid} left screen, grace_period={self.grace_period}s")
+            print(f"[DEBUG] Cursor {touch.uid} left screen")
         
         # Handle cursor leaving screen
         if self.use_grace:
-            self.pending_reset = Clock.schedule_once(self._reset_cursor, self.grace_period)
+            # Start grace period, reset when it expires
+            self.grace.start(on_expire_callback=self._on_grace_expire)
         else:
-            self._reset_cursor(0)
+            # Grace disabled, reset immediately
+            self._on_grace_expire()
         
-        # Register cursor
-        if self.cursor_inside is None:
-            self.cursor_inside = touch.uid
-
-        # Call callback if set
-        if self.on_touch_move_callback:
+        if self.on_touch_up_callback:
             try:
-                self.on_touch_move_callback(touch)
+                self.on_touch_up_callback(touch)
             except Exception as e:
-                print(f"[ERROR] on_touch_move_callback failed: {e}")
+                print(f"[ERROR] on_touch_up_callback failed: {e}")
         
-        return True
+        return
     
-    def _reset_cursor(self, dt):
-        """Resets the cursor after grace period ends"""
+    def _on_grace_expire(self):
+        """Called when grace period expires or is skipped"""
         if self.debug:
-            print(f"[DEBUG] Cursor reset (grace period expired)")
+            print(f"[DEBUG] Grace period expired, resetting")
         
         self.cursor_inside = None
-        self.pending_reset = None
         
-        # Call reset callback if set
         if self.on_reset_callback:
             try:
                 self.on_reset_callback()
             except Exception as e:
                 print(f"[ERROR] on_reset_callback failed: {e}")
-    
-    def _handle_grace(self, touch):
-        if self.use_grace and self.pending_reset is not None :
-                # Cancel pending reset if any cursor re-enters during grace period
-                Clock.unschedule(self.pending_reset)
-                self.pending_reset = None
-                print(f"Cursor {touch.uid} re-entered during grace period, reset cursor")
-                return True
-        
-        return False
