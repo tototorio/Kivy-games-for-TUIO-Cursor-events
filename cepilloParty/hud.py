@@ -1,38 +1,35 @@
 from engine.core.commons import *
-from engine.core.AssetManager import AssetManager
 
 class Menu(ModalView):
     """
     Main menu overlay that pauses the game.
     Appears at app start, after game completion, or when menu button is pressed.
     """
-    def __init__(self, game, **kwargs):
-        
 
-        self.game_screen = game
+    def __init__(self, game_screen, **kwargs):
+        # 1. Initialize Kivy first so the KV file is read and IDs are created!
+        super().__init__(**kwargs)
+        
+        # 2. Assign properties
+        self.game_screen = game_screen 
+        
+        # 3. Setup Logic
         self.ranking_view = Ranking(self)
         
-        # Set textures as properties (accessed in KV via root.*)
-        self.bg_texture = game.asset_m.get_asset("menu_bg", "image").texture
-        self.play_button_texture = game.asset_m.get_asset("play_button", "image").texture
-        self.ranking_button_texture = game.asset_m.get_asset("ranking_button", "image").texture
-        
-        self.rows_ranking_label = []
-        self.rows_ranking_data = []
-        
-        super().__init__(**kwargs)
 
     # After the KV is loaded, populate the grid programmatically
     def on_kv_post(self, base_widget):
         """Called after KV layout is created"""
         grid = self.ids.day_ranking_grid
-        
+        self.rows_ranking_label = []
+        self.rows_ranking_data = []
+
         for row in range(5):
             # Create score label
-            label_score = ScoreLabel(text=f"{row+1}. 0")
+            label_score = Factory.ScoreLabel(text=f"{row+1}. 0")
             
             # Create name label
-            label_name = NameLabel(text="---")
+            label_name = Factory.NameLabel(text="---")
             
             grid.add_widget(label_score)
             grid.add_widget(label_name)
@@ -54,49 +51,43 @@ class Menu(ModalView):
         self.title_label.text = text # type: ignore
 
     def update_score(self, new_score, name):
-        for index, row in enumerate((self.rows_ranking_label)):
-            print(f"Comparando score con {self.rows_ranking_data[index][0]}")
+        """Updates the ranking logic and the specific KV labels"""
+        # Logic to update self.rows_ranking_data goes here...
+        # ...
 
-            if self.rows_ranking_data[index][0] < new_score:
-                self.rows_ranking_data.append([new_score, name])
-                self.rows_ranking_data.sort(key=lambda column: column[0], reverse=True)
-                self.rows_ranking_data = self.rows_ranking_data[:5]
-                
-                #Update score graphics
-                for index, row in enumerate(self.rows_ranking_label):
-                    row[0].text = f"{index+1}. {self.rows_ranking_data[index][0]}"
-                    row[1].text = f"{self.rows_ranking_data[index][1]}"
+        # Update the specific labels using their IDs from KV
+        for index in range(5):
+            score_label = self.rows_ranking_label[index][0]
+            name_label = self.rows_ranking_label[index][1]
 
-                self.ranking_view.update_score(int(new_score), "LABAP")
-                
-                break
+            score_label.text = f"{index+1}. {self.rows_ranking_data[index][0]}"
+            name_label.text = f"{self.rows_ranking_data[index][1]}"
 
 
 class Ranking(ModalView):
 
     def __init__(self, menu: Menu, **kwargs):
-    
+        
         self.menu = menu
-        game = menu.game_screen
         
         # Store game reference for KV access
-        self.game = game
+        self.game = menu.game_screen
+        super().__init__(**kwargs)
+
+        self.close()
+
+    def on_kv_post(self, base_widget):
         
+        
+
         # Load JSON configuration
-        self.json_path = game.asset_m.get_asset("ranking", "config")
+        self.json_path = self.game.assets.get_asset("ranking", "config")
         with open(self.json_path, 'r') as f:
             self.ranking = json.load(f)
         
         self.highscores_label = []
         self.highscores = []
 
-        super().__init__(**kwargs)
-
-    def on_kv_post(self, base_widget):
-        """Called after KV layout is created - populate the grid"""
-        # Set background texture from KV
-        self.ids.ranking_bg.texture = self.game.asset_m.get_asset("ranking_bg", "image").texture
-        
         # Get grid reference
         grid = self.ids.highscores_grid
         
@@ -107,8 +98,8 @@ class Ranking(ModalView):
             name_text = score_data.get('name', '---')
             
             # Create labels using custom classes
-            label_score = HighScoreLabel(text=score_text)
-            label_name = HighNameLabel(text=name_text)
+            label_score = Factory.HighScoreLabel(text=score_text)
+            label_name = Factory.HighNameLabel(text=name_text)
             
             grid.add_widget(label_score)
             grid.add_widget(label_name)
@@ -147,15 +138,3 @@ class Ranking(ModalView):
 
     def close(self):
         self.dismiss()
-
-class ScoreLabel(Label):
-    pass
-
-class NameLabel(Label):
-    pass
-
-class HighScoreLabel(Label):
-    pass
-
-class HighNameLabel(Label):
-    pass

@@ -5,6 +5,8 @@ class AssetManager:
         self.game_name = game_name
         self.assets_path = os.path.join(ASSETS_PATH, game_name)
 
+        self.assets_ready = False
+
         # 1. Unified Storage Dictionaries
         self.images = {}
         self.sounds = {}
@@ -30,6 +32,8 @@ class AssetManager:
         self.load_all_assets('kv_lang')
         self.load_all_assets('font')
         self._load_atlas()
+
+        self.assets_ready = True
 
     def _load_json(self, path):
         """Helper for JSON loading"""

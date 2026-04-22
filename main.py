@@ -8,32 +8,31 @@ from engine.core.commons import *
 
 from engine.AppMenu import AppMenu
 from cepilloParty.game_main import CepilloParty
+from engine.core.AssetManager import AssetManager
 
-# Add project root to Python path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 
 class MainApp(App):
+    assets = ObjectProperty(None, allownone=True)
+    
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         
         # - STATE -
         self.current_game = None
         self.score = 0
-        self.sm = None 
+        self.sm = None
 
     def build(self):
         # Load Kivy lang instructions
-        Builder.load_file('assets/cepillo_party/kv_lang/hud.kv')
-        Builder.load_file('assets/cepillo_party/kv_lang/game.kv')
         Builder.load_file('assets/cepillo_party/kv_lang/app_menu.kv')
+        
 
         # Initialize screen manager and add screens
         self.sm = ScreenManager()
         
         # Add screens to manager
         self.sm.add_widget(AppMenu(name='menu'))
-        self.sm.add_widget(CepilloParty(name='cepillo_party'))
-        
         self.sm.current = 'menu'
         return self.sm
 
@@ -42,23 +41,25 @@ class MainApp(App):
         print(f"[MainApp] Starting game: {game_name}")
         self.current_game = game_name
         self.score = 0
+
+        # Load assets for the game
+        self.assets = AssetManager(game_name) 
         
-        screen = self.sm.get_screen(game_name) # type: ignore
-        if hasattr(screen, '_on_game_start'):
-            screen._on_game_start()
+        Builder.load_file('assets/cepillo_party/kv_lang/hud.kv')
+        Builder.load_file('assets/cepillo_party/kv_lang/game.kv')
+
+        self.sm.add_widget(CepilloParty()) # type: ignore
             
-        self.sm.current = game_name # type: ignore
+        self.sm.current = game_name #type: ignore
 
     def end_game(self, score):
         print(f"[MainApp] Game ended. Score: {score}")
         self.score = score
         self.current_game = None
-        
-        screen = self.sm.get_screen(self.sm.current) # type: ignore
-        if hasattr(screen, '_on_game_end'):
-            screen._on_game_end()
             
         self.sm.current = 'menu' # type: ignore
+
+
 
 if __name__ == '__main__':
     # Keep the __main__ block incredibly clean. 

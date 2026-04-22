@@ -8,6 +8,7 @@ from kivy.config import Config
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.graphics import Color, Line, Rectangle
+from kivy.graphics.texture import Texture
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
@@ -24,7 +25,8 @@ from kivy.core.image import Image as CoreImage
 from kivy.cache import Cache
 from kivy.atlas import Atlas
 from kivy.lang import Builder
-from kivy.event import EventDispatcher
+from kivy.factory import Factory
+from kivy.properties import ObjectProperty
 
 
 Config.set('input', 'tuio_listener', 'tuio,127.0.0.1:3333')

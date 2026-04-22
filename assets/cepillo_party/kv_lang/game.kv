@@ -5,7 +5,7 @@
         id: game_layout
         
         Image:
-            id: background_image
+            texture : app.assets.get_asset("game_background", "image").texture if app.assets else None
             allow_stretch: True
             keep_ratio: False
         
@@ -14,7 +14,7 @@
             size_hint: (1, 1)
 
         Image:
-            id: lips_layer
+            texture: app.assets.get_asset("lips", "image").texture if app.assets else None
             allow_stretch: True
             keep_ratio: False
             
@@ -33,7 +33,7 @@
             size: (100, 50)
             pos_hint: {'x': 0.01, 'top': 0.99}
             background_color: (0.8, 0.2, 0.2, 0.8)
-            on_press: root._open_menu(self)
+            on_press: root._open_menu()
     
     BoxLayout:
         id: loading_layout

@@ -1,27 +1,25 @@
 #:kivy
 from engine.core.commons import *
-from engine.core.AssetManager import AssetManager
 from cepilloParty.hud import Menu
 #from cepilloParty.managers.inputManager import InputManager
 
 
 
 class CepilloParty(Screen):
-    
+
     def __init__(self, **kwargs):
 
         # Game main variables
         self.name = 'cepillo_party'
-        self.assets_loaded = False
-        self.asset_m: AssetManager
         self.teeth = {}
-        
+        app = App.get_running_app()
+        self.assets = app.assets # type: ignore
+
         # Dirty logic
         self.max_dirty_teeth = 10
         self.filth_layers = {} # Contains the images
 
         # Initialize variables ONLY (no widgets!)
-        self.layout: FloatLayout | None = None
         self.game_active = False
         self.bg_music = None
         self.timer = 0
@@ -30,13 +28,12 @@ class CepilloParty(Screen):
 
         super().__init__(**kwargs)
 
-    def on_enter(self):
-        
+    def on_enter(self):     
         """Called when screen becomes active"""
-        
-        # Initialize Asset Manager and load assets
-        self.asset_m = AssetManager(self.name)
-        self.assets_loaded = True
+
+        self.menu = Menu(self)
+
+        self.ids.loading_layout.opacity =0
         self._setup_game()
 
     def on_leave(self):
@@ -44,27 +41,14 @@ class CepilloParty(Screen):
         self.game_active = False
         if self.bg_music:
             self.bg_music.stop()
-        self.layout.clear_widgets() # Clear game widgets # type: ignore
-        self.asset_m.unload_assets() # Unload assets to free memory
+
+        self.assets.unload_assets() # Unload assets to free memory
     
     def _setup_game(self):
         
         # Game variables
-        self.menu = Menu(self)
-        self.bg_music = self.asset_m.get_asset("background_music", "sound")
-
-        # Mouth and teeth background
-        self.ids.background_image.texture = self.asset_m.get_asset("game_background", "image").texture 
-        
-        # Lips and skin layer
-        self.ids.lips_layer.texture = self.asset_m.get_asset("lips", "image").texture
-        
-        # Uncover game
-        if self.ids.loading_layout:
-            self.ids.loading_layout.opacity = 0
-        
-        
-
+        self.bg_music = self.assets.get_asset("background_music", "sound")
+    
         self._open_menu()
     
     def _start_game(self):
@@ -81,6 +65,11 @@ class CepilloParty(Screen):
             Clock.unschedule(self._update_screen_timer) # Ensure no duplicate schedules
         except Exception as e:
             print(f"Error unscheduling timer: {e}")   
+
+        self.timer = 300 # Game duration in seconds
+        Clock.schedule_interval(self._update_screen_timer, 1) # Update timer every second
+        
+        self.game_active = True
     
     def _open_menu(self):
         """Pauses the game and opens the menu overlay"""
@@ -94,7 +83,7 @@ class CepilloParty(Screen):
         self.timer -= 1
 
         if (self.timer <= 0):
-            self.timerLabel.text = "TIEMPO" # type: ignore
+            self.ids.timer_label.text = "TIEMPO" # type: ignore
             self.game_active = False
             # ADD HERE ENDING SEQUENCE
             self.menu.open()
@@ -102,7 +91,7 @@ class CepilloParty(Screen):
             return False # Stops the clock schedule
         
         mins, secs = divmod(self.timer, 60)
-        self.timerLabel.text = f"{mins:02d}:{secs:02d}"
+        self.ids.timer_label.text = f"{mins:02d}:{secs:02d}"
 
     def _load_teeth(self):
         
@@ -111,7 +100,7 @@ class CepilloParty(Screen):
 
         tooth_number = 1
 
-        with open(self.asset_m.get_asset("teeth_config", "config"), 'r') as f:
+        with open(self.assets.get_asset("teeth_config", "config"), 'r') as f:
             teeth_data = json.load(f)
 
         # Select random teeth to be dirty
@@ -145,7 +134,7 @@ class CepilloParty(Screen):
             if is_dirty:
                 filth_key = f"Diente{tooth_number}(sucio)"
                 filth_layer = Image(
-                    texture=self.asset_m.get_asset(filth_key, "image").texture,
+                    texture=self.assets.get_asset(filth_key, "image").texture,
                     allow_stretch=True, 
                     keep_ratio=False
                 )
@@ -184,4 +173,4 @@ class TUIOTooth(TUIOButton):
         self.on_touch_down_callback = None # Called when a brush is completed
         self.on_touch_move_callback = None # Called on every touch move
         self.on_touch_up_callback = None # Called when touch is released
-        self.on_reset_callback
+        self.on_reset_callback = None # Called when the tooth is reset

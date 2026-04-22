@@ -1,5 +1,7 @@
 #:kivy 2.3.1
 
+#:kivy 2.3.1
+
 <ScoreLabel@Label>:
     font_name: 'fun_font'
     font_size: '28sp'
@@ -20,18 +22,20 @@
     height: 50
     text_size: self.size
 
+
 <Menu>:
     size_hint: (1, 1)
     auto_dismiss: False
     background_color: (0, 0, 0, 0.85)
-    canvas.before:
-        Rectangle:
-            texture: root.bg_texture
-            size: self.size
-            pos: self.pos
 
     FloatLayout:
-        # Welcome/Title label
+        canvas.before:
+            Rectangle:
+               
+                texture: app.assets.get_asset("menu_bg", "image").texture if app.assets else None
+                size: self.size
+                pos: self.pos
+        
         Label:
             id: title_label
             text: 'CEPILLO PARTY'
@@ -40,35 +44,30 @@
             pos_hint: {'center_x': 0.5, 'top': 0.95}
             color: (1, 1, 1, 1)
         
-        # Play button (centered)
         Button:
             id: play_button
             size_hint: (0.4, 0.5)
             pos_hint: {'center_x': 0.5, 'center_y': 0.4}
-            background_normal: ''
             background_color: (1, 1, 1, 0)
             canvas:
                 Rectangle:
-                    texture: root.play_button_texture
+                    texture: app.assets.get_asset("play_button", "image").texture if app.assets else None
                     size: self.size
                     pos: self.pos
             on_press: root._start_game()
         
-        # Ranking button
         Button:
             id: ranking_button
             size_hint: (0.18, 0.25)
             pos_hint: {'center_x': 0.9, 'center_y': 0.85}
-            background_normal: ''
             background_color: (1, 1, 1, 0)
             canvas:
                 Rectangle:
-                    texture: root.ranking_button_texture
+                    texture: app.assets.get_asset("ranking_button", "image").texture if app.assets else None
                     size: self.size
                     pos: self.pos
             on_press: root._show_ranking()
 
-        # Day Ranking Box
         BoxLayout:
             id: day_ranking_box
             orientation: 'vertical'
@@ -93,7 +92,42 @@
                 spacing: [20, 10]
                 size_hint_y: None
                 height: 250
-                # Rows will be populated from Python code
+                
+               
+                ScoreLabel:
+                    id: score_1
+                    text: "1. 0"
+                NameLabel:
+                    id: name_1
+                    text: "---"
+                
+                ScoreLabel:
+                    id: score_2
+                    text: "2. 0"
+                NameLabel:
+                    id: name_2
+                    text: "---"
+                
+                ScoreLabel:
+                    id: score_3
+                    text: "3. 0"
+                NameLabel:
+                    id: name_3
+                    text: "---"
+                
+                ScoreLabel:
+                    id: score_4
+                    text: "4. 0"
+                NameLabel:
+                    id: name_4
+                    text: "---"
+                
+                ScoreLabel:
+                    id: score_5
+                    text: "5. 0"
+                NameLabel:
+                    id: name_5
+                    text: "---"
 
 
 <HighScoreLabel@Label>:
@@ -115,24 +149,24 @@
     size_hint: (0.3, None)
     height: 50
     text_size: self.size
+    
 
 <Ranking>:
     size_hint: (0.5, 0.9)
     pos_hint: {"center_x": 0.5, "center_y": 0.5}
     overlay_color: (0, 0, 0, 0.9)
+
+    Image:
+        texture: app.assets.get_asset("ranking_bg", "image").texture if app.assets else None
+        allow_stretch: True
+        keep_ratio: False
+        size_hint: (1, 1)
+        pos_hint: {'x': 0, 'y': 0}
     
-    FloatLayout:
-        Image:
-            id: ranking_bg
-            allow_stretch: True
-            keep_ratio: False
-            size_hint: (1, 1)
-            pos_hint: {'x': 0, 'y': 0}
-        
-        GridLayout:
-            id: highscores_grid
-            cols: 2
-            spacing: [20, 10]
-            size_hint: (0.8, 0.55)
-            pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+    GridLayout:
+        id: highscores_grid
+        cols: 2
+        spacing: [20, 10]
+        size_hint: (0.8, 0.55)
+        pos_hint: {'center_x': 0.5, 'center_y': 0.5}
     
