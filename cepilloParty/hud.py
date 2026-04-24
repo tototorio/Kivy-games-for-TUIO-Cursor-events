@@ -6,12 +6,12 @@ class Menu(ModalView):
     Appears at app start, after game completion, or when menu button is pressed.
     """
 
-    def __init__(self, game_screen, **kwargs):
+    def __init__(self, game, **kwargs):
         # 1. Initialize Kivy first so the KV file is read and IDs are created!
         super().__init__(**kwargs)
         
         # 2. Assign properties
-        self.game_screen = game_screen 
+        self.game = game
         
         # 3. Setup Logic
         self.ranking_view = Ranking(self)
@@ -38,11 +38,6 @@ class Menu(ModalView):
             self.rows_ranking_label.append([label_score, label_name])
             self.rows_ranking_data.append([0, "---"])
     
-    def _start_game(self):
-        """Closes menu and starts/restarts the game"""
-        self.dismiss()
-        self.game_screen._start_game()
-    
     def _show_ranking(self):
         self.ranking_view.open()
     
@@ -68,18 +63,13 @@ class Ranking(ModalView):
 
     def __init__(self, menu: Menu, **kwargs):
         
-        self.menu = menu
-        
         # Store game reference for KV access
-        self.game = menu.game_screen
+        self.game = menu.game
         super().__init__(**kwargs)
 
-        self.close()
+        self.dismiss()
 
     def on_kv_post(self, base_widget):
-        
-        
-
         # Load JSON configuration
         self.json_path = self.game.assets.get_asset("ranking", "config")
         with open(self.json_path, 'r') as f:
@@ -135,6 +125,3 @@ class Ranking(ModalView):
                     row[0].text = f"{index+1}. {self.highscores[index][0]}"
                     row[1].text = f"{self.highscores[index][1]}"
                 break
-
-    def close(self):
-        self.dismiss()

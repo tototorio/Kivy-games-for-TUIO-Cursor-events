@@ -54,7 +54,7 @@
                     texture: app.assets.get_asset("play_button", "image").texture if app.assets else None
                     size: self.size
                     pos: self.pos
-            on_press: root._start_game()
+            on_press: root.game._start_game()
         
         Button:
             id: ranking_button

@@ -5,15 +5,13 @@ class AssetManager:
         self.game_name = game_name
         self.assets_path = os.path.join(ASSETS_PATH, game_name)
 
-        self.assets_ready = False
-
         # 1. Unified Storage Dictionaries
         self.images = {}
         self.sounds = {}
         self.configs = {}
         self.kv_lang = {}
         self.fonts = {}
-        self.animations = {} # For storing atlas animations
+        self.anim_frames = {} # For storing atlas animations
         self.atlas = None
         
         # 2. The Configuration Map 
@@ -33,7 +31,6 @@ class AssetManager:
         self.load_all_assets('font')
         self._load_atlas()
 
-        self.assets_ready = True
 
     def _load_json(self, path):
         """Helper for JSON loading"""
@@ -115,7 +112,7 @@ class AssetManager:
     def _process_atlas_animations(self):
         """
         Groups atlas textures by their prefix and sorts them numerically.
-        Example: 'brush_01', 'brush_02' -> self.animations['brush'] = [tex, tex]
+        Example: 'brush_01', 'brush_02' -> self.anim_frames['brush'] = [tex, tex]
         """
         if not self.atlas:
             return
@@ -139,4 +136,4 @@ class AssetManager:
             # Sort by the integer frame number we stored in the tuple
             frames.sort(key=lambda x: x[0])
             # Extract just the texture objects into a clean list
-            self.animations[prefix] = [f[1] for f in frames]
+            self.anim_frames[prefix] = [f[1] for f in frames]

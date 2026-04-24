@@ -3,6 +3,7 @@ import sys
 import json
 import random
 import re
+from typing import Callable, Optional
 from enum import Enum
 from kivy.config import Config
 from kivy.app import App
@@ -27,7 +28,7 @@ from kivy.atlas import Atlas
 from kivy.lang import Builder
 from kivy.factory import Factory
 from kivy.properties import ObjectProperty
-
+from kivy.event import EventDispatcher
 
 Config.set('input', 'tuio_listener', 'tuio,127.0.0.1:3333')
 
@@ -55,6 +56,7 @@ class GracePeriodManager:
     
     def start(self, on_expire_callback=None) -> None:
         """Start grace period. Calls callback when it expires."""
+        
         if self.pending_reset:
             self.cancel()  # Cancel any existing grace
         
@@ -75,32 +77,29 @@ class GracePeriodManager:
         if callback:
             callback()
 
-
 class TUIOButton(Widget):
-    def __init__(self, normalized_coords, use_grace: bool, **kwargs):
-        
-        
+    def __init__(self, normalized_coords, use_grace: bool, is_button_active: bool, **kwargs):
         
         # Configuration
         self.coords = normalized_coords
         self.debug = True
-        self.use_grace = use_grace
+        self.active = is_button_active
         
         # Grace system (extracted to manager)
-        self.grace = GracePeriodManager(duration=0.3)
+        if use_grace:
+            self.grace = GracePeriodManager(duration=0.3)
+        else:
+            self.grace = None
         
         # State
-        self.cursor_inside = None
+        self.owner_uid = None
         
-        # Callbacks
-        self.on_touch_down_callback = None
-        self.on_touch_move_callback = None
-        self.on_touch_up_callback = None
-        self.on_reset_callback = None
-
+        # Event dispatchers
+        self.register_event_type('on_cursor_enter') #type: ignore
+        self.register_event_type('on_cursor_move') #type: ignore
+        self.register_event_type('on_cursor_leave') #type: ignore
         super().__init__(**kwargs)
 
-        
     def _normalized_to_pixels(self, x_norm, y_norm):
         """Converts normalized coordinates (0.0-1.0) to pixels"""
         return (x_norm * Window.width, y_norm * Window.height)
@@ -109,7 +108,7 @@ class TUIOButton(Widget):
         """Gets polygon vertices in pixel coordinates"""
         return [self._normalized_to_pixels(x, y) for x, y in self.coords]
 
-    def _point_inside_polygon(self, x, y):
+    def _is_cursor_inside(self, x, y):
         """
         Determines if a point (x, y) is inside the polygon using Ray Casting.
         
@@ -143,107 +142,180 @@ class TUIOButton(Widget):
     def on_touch_down(self, touch):
         """Handles when a TUIO cursor enters the screen"""
         
-        # Ignore if not inside
-        if not self._point_inside_polygon(touch.x, touch.y):
+        if not self.active:
+            return
+
+        # Case: cursor that appeared is outside the button
+        if not self._is_cursor_inside(touch.x, touch.y):
             return
         
-        # If new cursor, check for grace period
-        if self.cursor_inside != None and self.cursor_inside != touch.uid:
-            if self.use_grace and self.grace.is_active():
+        # Case: cursor that appeared is inside the button
+
+        # Case: already an owner for this button
+        if self.owner_uid is not None:
+            # Case: grace being used and active for this button
+            if self.grace and self.grace.is_active():
+                self.grace.cancel()
+                self.owner_uid = touch.uid 
                 return
-            
-        # Cancel grace if re-entering during grace period
-        if self.grace.is_active():
-            self.grace.cancel()
-            if self.debug:
-                print(f"[DEBUG] Cursor {touch.uid} re-entered, grace canceled")
-        
-        was_empty = self.cursor_inside is None
-        self.cursor_inside = touch.uid
-        
-        if self.debug and was_empty:
-            print(f"[DEBUG] Cursor {touch.uid} registered (first touch)")
-        
-        if self.on_touch_down_callback:
-            try:
-                self.on_touch_down_callback(touch)
-            except Exception as e:
-                print(f"[ERROR] on_touch_down_callback failed: {e}")
-        
+            # Case: grace not active or not used, ignore new touch
+            else:
+                return
+    
+        # Case: no owner for this button
+        self.owner_uid = touch.uid
+
+        self.dispatch('on_cursor_enter', touch)  # type: ignore
         return
     
     def on_touch_move(self, touch):
         """Called when a TUIO cursor MOVES"""
         
-        # If there is a cursor insode and it's not the same one, check grace
-        if self.cursor_inside != None and self.cursor_inside != touch.uid:
-            if self.use_grace and self.grace.is_active():
+        if not self.active:
+            return
+
+        inside = self._is_cursor_inside(touch.x, touch.y)
+
+        # Case: cursor that moved its outside
+        if not inside:
+            # Case: said cursor is owner of button
+            if touch.uid == self.owner_uid:
+                # Case: using grace and grace not active for this button yet
+                if self.grace and not self.grace.is_active():
+                    self.grace.start(on_expire_callback=self._on_grace_expire)
+                    return
+            #Case: said cursor is not owner of button
+            else:
                 return
         
-        # Check if cursor is inside polygon
-        if not self._point_inside_polygon(touch.x, touch.y):
-            if self.cursor_inside == touch.uid:
-                # Cursor just left the polygon
-                self.cursor_inside = None
-                
-                if self.use_grace:
-                    self.grace.start(on_expire_callback=self._on_grace_expire)
+        # Case: cursor that moved its inside
+        
+        # Case: no owner for button
+        if self.owner_uid is None:
+            self.owner_uid = touch.uid
+            self.dispatch('on_cursor_enter', touch)  # type: ignore
+            return
 
-                    if self.debug:
-                        print(f"[DEBUG] Cursor {touch.uid} left polygon, grace period starting")
-                
-                if self.on_touch_up_callback:
-                    try:
-                        self.on_touch_up_callback(touch)
-                    except Exception as e:
-                        print(f"[ERROR] on_touch_up_callback failed: {e}")
-            
+        # Case: said cursor is owner of button
+        elif self.owner_uid == touch.uid:
+            self.dispatch('on_cursor_move', touch)  # type: ignore
             return
         
-        self.cursor_inside = touch.uid
-        
-        if self.on_touch_move_callback:
-            try:
-                self.on_touch_move_callback(touch)
-            except Exception as e:
-                print(f"[ERROR] on_touch_move_callback failed: {e}")
-        
-        return
+        # Case: said cursor is not owner of button
+        else:
+            # Case: using grace and grace active for this button
+            if self.grace and self.grace.is_active():
+                self.grace.cancel()
+                self.owner_uid = touch.uid
+            # Case: no grace for this button
+            else:
+                return
     
     def on_touch_up(self, touch):
         """Called when a cursor LEAVES the screen"""
         
-        if touch.uid != self.cursor_inside:
+        if not self.active:
+            return
+
+        # Case: cursor that left is not owner of button
+        if touch.uid != self.owner_uid:
             return
         
-        if self.debug:
-            print(f"[DEBUG] Cursor {touch.uid} left screen")
-        
-        # Handle cursor leaving screen
-        if self.use_grace:
-            # Start grace period, reset when it expires
+        # Case: cursor that left is owner of button
+
+        # Case: using grace for this button
+        if self.grace:
             self.grace.start(on_expire_callback=self._on_grace_expire)
-        else:
-            # Grace disabled, reset immediately
-            self._on_grace_expire()
-        
-        if self.on_touch_up_callback:
-            try:
-                self.on_touch_up_callback(touch)
-            except Exception as e:
-                print(f"[ERROR] on_touch_up_callback failed: {e}")
-        
-        return
+            return
+        # Case: no grace, reset immediately
+        else:    
+            self.dispatch('on_cursor_leave', touch)  # type: ignore
+            self.owner_uid = None
+            return
     
     def _on_grace_expire(self):
         """Called when grace period expires or is skipped"""
         if self.debug:
             print(f"[DEBUG] Grace period expired, resetting")
         
-        self.cursor_inside = None
+        self.owner_uid = None
+        self.dispatch('on_cursor_leave')  # type: ignore
+
+    def on_cursor_enter(self, touch = None):
+        pass
+
+    def on_cursor_leave(self, touch = None):
+        pass
+
+    def on_cursor_move(self, touch = None):
+        pass
+
+class AnimatedSprite(Image):
+    def __init__(self, keys: list, frames, duration=1.0, persistent=False, sound=None, game=None, **kwargs):
+        super().__init__(**kwargs)
+
+        self.frames = frames
+        self.total_duration = duration
+        self.persistent = persistent
+        self.sfx = sound
+
+        self._elapsed = 0.0
+        self._playing = False
+        self.opacity = 0 
+
+        if self.frames == None :
+            raise ValueError("AnimatedSprite requires a list of frames to function")
+        if game == None:
+            raise ValueError("AnimatedSprite requires a reference to the game instance for animation management")       
+        if keys == None or len(keys) != 2:
+            raise ValueError("AnimatedSprite requires 'keys' argument with format [tooth_key, anim_key] for animation management")
         
-        if self.on_reset_callback:
-            try:
-                self.on_reset_callback()
-            except Exception as e:
-                print(f"[ERROR] on_reset_callback failed: {e}")
+        self.texture = self.frames[0]
+
+        game.add_widget(self) 
+
+        if keys[0] in game.active_animations:
+            game.active_animations[keys[0]][keys[1]] = self 
+        else:
+            game.active_animations[keys[0]] = {keys[1]: self}
+
+    def play(self):
+        """Resume from wherever it stopped"""
+        self._playing = True
+        self.opacity = 1
+        if self.sfx:
+            self.sfx.play()
+
+    def stop(self):
+        """Freeze on current frame, stay quiet"""
+        self._playing = False
+        self.opacity = 0
+        if self.sfx:
+            self.sfx.stop()
+
+    def reset(self):
+        """Rewind to frame 0 without affecting play state"""
+        self._elapsed = 0.0
+        if self.frames:
+            self.texture = self.frames[0]
+
+    def step(self, dt) -> bool:
+        """
+        Advance the animation by dt seconds.
+        Returns True if the sprite should stay alive, False if it should be removed.
+        """
+        if not self._playing:
+            return True  # paused but alive
+
+        self._elapsed += dt
+        progress = min(self._elapsed / self.total_duration, 1.0)
+        idx = min(int(progress * len(self.frames)), len(self.frames) - 1)
+
+        if progress >= 1.0:
+            if self.persistent:
+                self._elapsed = self._elapsed % self.total_duration  # wrap cleanly
+            else:
+                return False
+
+        self.texture = self.frames[idx]
+        return True
