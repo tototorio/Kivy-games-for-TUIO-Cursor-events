@@ -10,8 +10,8 @@ class AppMenu(Screen):
 
     def play_teeth(self, instance=None):
         app = App.get_running_app()
-        app.start_game('cepillo_party') # type: ignore
+        app.start_cepillo_party() # type: ignore
     
-    def play_intestine(self, instance=None):
+    def play_comida(self, instance=None):
         app = App.get_running_app()
-        app.start_game('intestine') # type: ignore
+        app.start_juego_comida() # type: ignore

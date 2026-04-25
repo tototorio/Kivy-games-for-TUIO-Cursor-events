@@ -3,6 +3,7 @@ import os
 from engine.core.commons import *
 from engine.AppMenu import AppMenu
 from cepilloParty.game_main import CepilloParty
+from juegoComida.game_main import JuegoComida
 from engine.core.AssetManager import AssetManager
 
 # Add project root to Python path (enables imports from anywhere)
@@ -14,52 +15,45 @@ class MainApp(App):
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        
-        # - STATE -
         self.current_game = None
         self.scores = {}
-        self.sm = None
+        self._loaded_kv = set()  # track loaded files
 
     def build(self):
-        # Load Kivy lang instructions
+        # Load ALL KV files once at startup, not per game
         Builder.load_file('assets/cepillo_party/kv_lang/app_menu.kv')
-    
-        # Initialize screen manager and add screens
+
         self.sm = ScreenManager()
-        
-        # Add screens to manager
         self.sm.add_widget(AppMenu(name='menu'))
         self.sm.current = 'menu'
         return self.sm
 
-    # --- LOGIC ---
-    def start_game(self, game_name):
+    def _load_kv(self, path):
+        if path not in self._loaded_kv:
+            Builder.load_file(path)
+            self._loaded_kv.add(path)
+
+    def start_cepillo_party(self):
+        self.current_game = 'cepillo_party'
+        self.assets = AssetManager(self.current_game)
+        self._load_kv('assets/cepillo_party/kv_lang/hud.kv')
+        self._load_kv('assets/cepillo_party/kv_lang/game.kv')
+        self.sm.add_widget(CepilloParty(name='cepillo_party', assets=self.assets))
+        self.sm.current = 'cepillo_party'
+    
+    def start_juego_comida(self):
+        self.current_game = 'juego_comida'
+        self.assets = AssetManager(self.current_game)
         
-        if game_name == 'cepillo_party':
-            self._start_cepillo_party()
-        else:
-            print(f"[MainApp] Unknown game: {game_name}")
+        self.sm.add_widget(JuegoComida(name='juego_comida', assets=self.assets))
+        self.sm.current = 'juego_comida'
 
     def end_game(self, scores):
-        print(f"[MainApp] Game ended. Score: {scores}")
         self.scores[self.current_game] = scores
+        old_game = self.current_game
         self.current_game = None
-            
-        self.sm.current = 'menu' # type: ignore
-
-    def _start_cepillo_party(self):
-        print(f"[MainApp] Starting Cepillo Party...")
-        self.current_game = 'cepillo_party' 
-
-        # Load assets for the game
-        self.assets = AssetManager(self.current_game) 
-        
-        Builder.load_file('assets/cepillo_party/kv_lang/hud.kv')
-        Builder.load_file('assets/cepillo_party/kv_lang/game.kv')
-
-        self.sm.add_widget(CepilloParty(assets=self.assets)) # type: ignore
-            
-        self.sm.current = self.current_game #type: ignore
+        self.sm.current = 'menu'                        # triggers on_leave
+        self.sm.remove_widget(self.sm.get_screen(old_game))  # then destroy
 
 if __name__ == '__main__':
     # Keep the __main__ block incredibly clean. 

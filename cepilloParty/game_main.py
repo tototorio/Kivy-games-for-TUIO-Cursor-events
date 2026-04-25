@@ -1,13 +1,14 @@
 
 from engine.core.commons import *
 from cepilloParty.hud import Menu
+from engine.core.AssetManager import AssetManager
 #from cepilloParty.managers.inputManager import InputManager
 
 
 
 class CepilloParty(Screen):
 
-    def __init__(self, assets, **kwargs):
+    def __init__(self, assets : AssetManager, **kwargs):
 
         # Game state variables
         self.name = 'cepillo_party'
@@ -24,7 +25,6 @@ class CepilloParty(Screen):
         # Teeth management
         self.teeth = {}
         self.max_dirty_teeth = 10
-        self.filth_layers = {} # Contains the images
         
         super().__init__(**kwargs)
 
@@ -38,8 +38,24 @@ class CepilloParty(Screen):
         if self.bg_music:
             self.bg_music.stop()
 
+        # Remove all active animation widgets and stop their audio
+        for anims in self.active_animations.values():
+            for anim in anims.values():
+                anim.stop()
+                self.remove_widget(anim)
+        self.active_animations.clear()
+
+        # Remove all tooth widgets and their related
+        for tooth in self.teeth.values():
+            if tooth.filth_layer:
+                self.ids.teeth_filth_layout.remove_widget(tooth.filth_layer)
+            if tooth.grace and tooth.grace.is_active():
+                tooth.grace.cancel()          
+            self.remove_widget(tooth)
+        self.teeth.clear()
+
         self.assets.unload_assets() # Unload assets to free memory
-    
+
     def _setup_game(self):
         """Called once to setup the game screen after assets are loaded"""
         
@@ -79,12 +95,8 @@ class CepilloParty(Screen):
         self.bg_music.volume = 0.3
         self.menu.open()
 
-        for filth in self.filth_layers.values():
-            self.ids.teeth_filth_layout.remove_widget(filth)
-        self.filth_layers.clear()
+        self._setup_teeth()
 
-
-    
     def _load_teeth(self):
         """Loads tooth configurations and initializes tooth widgets on the screen"""
 
@@ -121,7 +133,6 @@ class CepilloParty(Screen):
             )
             self.ids.teeth_filth_layout.add_widget(filth_layer)
             filth_layer.opacity = 0 # Hide for now, will be shown when tooth is dirty
-            self.filth_layers[tooth_id] = filth_layer
             self.teeth[tooth_id].filth_layer = filth_layer
 
             # Animations for brushing feedbacK
@@ -156,7 +167,6 @@ class CepilloParty(Screen):
             if is_dirty:
                 tooth.make_dirty() # Mark as dirty and show filth layer
             
-
     def _update(self, dt):
         """Main update loop for the game, called every frame when active"""
         

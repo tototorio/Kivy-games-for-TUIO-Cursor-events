@@ -32,12 +32,13 @@
         
         # Second game button
         Button:
-            text : 'JUEGO 2'
+            text : 'Juego comida'
             size_hint_y : None
             height : 100
             background_color : (0.7, 0.3, 0.3, 1)  # Red
             font_size :'28sp'
-
+            on_press : root.play_comida()
+            
         # Footer with instructions
         BoxLayout:
             size_hint_y : 0.15

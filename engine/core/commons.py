@@ -5,7 +5,11 @@ import random
 import re
 from typing import Callable, Optional
 from enum import Enum
+
 from kivy.config import Config
+Config.set('graphics', 'fullscreen', 'auto')
+Config.set('input', 'tuio_listener', 'tuio,127.0.0.1:3333')
+
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.graphics import Color, Line, Rectangle
@@ -30,7 +34,7 @@ from kivy.factory import Factory
 from kivy.properties import ObjectProperty
 from kivy.event import EventDispatcher
 
-Config.set('input', 'tuio_listener', 'tuio,127.0.0.1:3333')
+
 
 BASE_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) 
 ASSETS_PATH = os.path.join(BASE_PATH, "assets")
@@ -81,10 +85,10 @@ class TUIOButton(Widget):
     def __init__(self, normalized_coords, use_grace: bool, is_button_active: bool, **kwargs):
         
         # Configuration
-        self.coords = normalized_coords
         self.debug = True
         self.active = is_button_active
-        
+        self.norm_coords = normalized_coords
+
         # Grace system (extracted to manager)
         if use_grace:
             self.grace = GracePeriodManager(duration=0.3)
@@ -100,13 +104,13 @@ class TUIOButton(Widget):
         self.register_event_type('on_cursor_leave') #type: ignore
         super().__init__(**kwargs)
 
-    def _normalized_to_pixels(self, x_norm, y_norm):
-        """Converts normalized coordinates (0.0-1.0) to pixels"""
-        return (x_norm * Window.width, y_norm * Window.height)
+        # Coordinates calculated after super
+        self._pixel_coods = normalized_to_pixel_coords(self.norm_coords)
 
-    def _get_polygon_vertices_pixel_coords(self):
-        """Gets polygon vertices in pixel coordinates"""
-        return [self._normalized_to_pixels(x, y) for x, y in self.coords]
+    # Since resolution won't change during gameplay, we can calculate polygon vertices in pixel coordinates once.
+    #def _get_polygon_vertices_pixel_coords(self):
+    #    """Gets polygon vertices in pixel coordinates"""
+    #    return self._normalized_to_pixel_coords()
 
     def _is_cursor_inside(self, x, y):
         """
@@ -118,7 +122,7 @@ class TUIOButton(Widget):
         - If number of intersections is odd → point INSIDE
         - If number is even → point OUTSIDE
         """
-        polygon = self._get_polygon_vertices_pixel_coords()
+        polygon = self._pixel_coods
         n = len(polygon)
         
         inside = False
@@ -319,3 +323,11 @@ class AnimatedSprite(Image):
 
         self.texture = self.frames[idx]
         return True
+    
+# Common functions
+
+def normalized_to_pixel_coords(norm_coords: tuple):
+        return tuple(
+            (x * Window.width, y * Window.height)
+            for x, y in norm_coords
+        )
