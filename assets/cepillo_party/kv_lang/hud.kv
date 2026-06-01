@@ -3,7 +3,7 @@
 #:kivy 2.3.1
 
 <ScoreLabel@Label>:
-    font_name: 'fun_font'
+    font_name: 'main_font'
     font_size: '28sp'
     halign: 'left'
     valign: 'middle'
@@ -13,7 +13,7 @@
     text_size: self.size
 
 <NameLabel@Label>:
-    font_name: 'fun_font'
+    font_name: 'main_font'
     font_size: '28sp'
     halign: 'right'
     valign: 'middle'
@@ -36,18 +36,17 @@
                 size: self.size
                 pos: self.pos
         
-        Label:
-            id: title_label
-            text: 'CEPILLO PARTY'
-            font_size: '40sp'
-            size_hint: (1, 0.3)
+        Image:
+            texture: app.assets.get_asset("logo", "image").texture if app.assets else None
+            size_hint: (0.8, 0.5)     
             pos_hint: {'center_x': 0.5, 'top': 0.95}
-            color: (1, 1, 1, 1)
+            allow_stretch: True          
+            keep_ratio: True        
         
         Button:
             id: play_button
-            size_hint: (0.4, 0.5)
-            pos_hint: {'center_x': 0.5, 'center_y': 0.4}
+            size_hint: (0.25, 0.3)     
+            pos_hint: {'center_x': 0.5, 'center_y': 0.2}
             background_color: (1, 1, 1, 0)
             canvas:
                 Rectangle:
@@ -79,7 +78,7 @@
             Label:
                 id: day_ranking_title
                 text: 'TOP DEL DIA'
-                font_name: 'fun_font'
+                font_name: 'main_font'
                 font_size: '40sp'
                 size_hint_y: None
                 height: 60
@@ -88,7 +87,7 @@
 
             GridLayout:
                 id: day_ranking_grid
-                cols: 2
+                cols: 1
                 spacing: [20, 10]
                 size_hint_y: None
                 height: 250
@@ -97,41 +96,26 @@
                 ScoreLabel:
                     id: score_1
                     text: "1. 0"
-                NameLabel:
-                    id: name_1
-                    text: "---"
                 
                 ScoreLabel:
                     id: score_2
                     text: "2. 0"
-                NameLabel:
-                    id: name_2
-                    text: "---"
                 
                 ScoreLabel:
                     id: score_3
                     text: "3. 0"
-                NameLabel:
-                    id: name_3
-                    text: "---"
                 
                 ScoreLabel:
                     id: score_4
                     text: "4. 0"
-                NameLabel:
-                    id: name_4
-                    text: "---"
                 
                 ScoreLabel:
                     id: score_5
                     text: "5. 0"
-                NameLabel:
-                    id: name_5
-                    text: "---"
 
 
 <HighScoreLabel@Label>:
-    font_name: 'fun_font'
+    font_name: 'main_font'
     font_size: '35sp'
     halign: 'left'
     valign: 'middle'
@@ -141,7 +125,7 @@
     text_size: self.size
 
 <HighNameLabel@Label>:
-    font_name: 'fun_font'
+    font_name: 'main_font'
     font_size: '35sp'
     halign: 'right'
     valign: 'middle'

@@ -20,12 +20,12 @@ class AssetManager:
             'sound':   {'folder': 'sounds',  'ext': '.mp3',   'store': self.sounds,   'loader': SoundLoader.load},
             'config':  {'folder': 'config',  'ext': '.json',  'store': self.configs,  'loader': lambda p: p}, # Config just stores the path, we load it on demand
             'kv_lang': {'folder': 'kv_lang',      'ext': '.kv',    'store': self.kv_lang,  'loader': lambda p: p}, # KV just stores the path
-            'font':    {'folder': 'fonts',   'ext': '.ttf',   'store': self.fonts,    'loader': lambda p: self._register_font(p)}
+            'font':    {'folder': 'fonts',   'ext': '.otf',   'store': self.fonts,    'loader': lambda p: self._register_font(p)}
         }
 
         # 3. Load all assets at initialization
         self.load_all_assets('image')
-        self.load_all_assets('sound')
+        #self.load_all_assets('sound')
         self.load_all_assets('config')
         self.load_all_assets('kv_lang')
         self.load_all_assets('font')

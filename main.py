@@ -19,14 +19,18 @@ class MainApp(App):
         self.scores = {}
         self._loaded_kv = set()  # track loaded files
 
+        
+
     def build(self):
         # Load ALL KV files once at startup, not per game
-        Builder.load_file('assets/cepillo_party/kv_lang/app_menu.kv')
-
+        #Builder.load_file('assets/cepillo_party/kv_lang/app_menu.kv')
+        #self.sm.add_widget(AppMenu(name='menu'))
+        #self.sm.current = 'menu'
         self.sm = ScreenManager()
-        self.sm.add_widget(AppMenu(name='menu'))
-        self.sm.current = 'menu'
         return self.sm
+
+    def on_start(self):
+        self.start_cepillo_party()
 
     def _load_kv(self, path):
         if path not in self._loaded_kv:
@@ -59,3 +63,5 @@ if __name__ == '__main__':
     # Keep the __main__ block incredibly clean. 
     # Just instantiate and run.
     MainApp().run()
+
+    

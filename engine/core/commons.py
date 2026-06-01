@@ -11,8 +11,9 @@ Config.set('graphics', 'fullscreen', 'auto')
 Config.set('input', 'tuio_listener', 'tuio,127.0.0.1:3333')
 
 from kivy.app import App
+from kivy.animation import Animation
 from kivy.clock import Clock
-from kivy.graphics import Color, Line, Rectangle
+from kivy.graphics import Color, Line, Rectangle, Ellipse
 from kivy.graphics.texture import Texture
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.boxlayout import BoxLayout
@@ -44,6 +45,12 @@ SOUNDS_PATH = os.path.join(ASSETS_PATH, "sounds")
 FONTS_PATH = os.path.join(ASSETS_PATH, "fonts")
 KV_LANG_PATH = os.path.join(ASSETS_PATH, "kv_lang")
 CONFIG_PATH = os.path.join(BASE_PATH, "config")
+
+TOOTH_BASE_POINTS = 1000
+TOOTH_TIME_MULTIPLIER = 50
+COMPLETION_BONUS = 20000
+COMPLETION_TIME_MULTIPLIER = 200
+STILLNESS_THRESHOLD = 0.15 
 
 # Common classes
 
@@ -217,14 +224,18 @@ class TUIOButton(Widget):
     
     def on_touch_up(self, touch):
         """Called when a cursor LEAVES the screen"""
-        
-        if not self.active:
-            return
-
+    
         # Case: cursor that left is not owner of button
         if touch.uid != self.owner_uid:
             return
         
+        if not self.active:
+            # Still clean up ownership, just don't notify
+            self.owner_uid = None
+            if self.grace:
+                self.grace.cancel()
+            return
+
         # Case: cursor that left is owner of button
 
         # Case: using grace for this button
@@ -239,9 +250,6 @@ class TUIOButton(Widget):
     
     def _on_grace_expire(self):
         """Called when grace period expires or is skipped"""
-        if self.debug:
-            print(f"[DEBUG] Grace period expired, resetting")
-        
         self.owner_uid = None
         self.dispatch('on_cursor_leave')  # type: ignore
 

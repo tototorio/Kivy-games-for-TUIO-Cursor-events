@@ -1,5 +1,5 @@
 {
-    "python.defaultInterpreterPath": "/home/torio/Escritorio/código/LABAP/proyectos_kivy/kivy_venv/bin/python",
+    "python.defaultInterpreterPath": "python",
     "python.linting.enabled": true,
     "python.linting.pylintEnabled": false,
     "python.analysis.typeCheckingMode": "basic"

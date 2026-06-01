@@ -5,59 +5,25 @@ class Menu(ModalView):
     Main menu overlay that pauses the game.
     Appears at app start, after game completion, or when menu button is pressed.
     """
-
     def __init__(self, game, **kwargs):
-        # 1. Initialize Kivy first so the KV file is read and IDs are created!
         super().__init__(**kwargs)
-        
-        # 2. Assign properties
         self.game = game
-        
-        # 3. Setup Logic
         self.ranking_view = Ranking(self)
-        
 
-    # After the KV is loaded, populate the grid programmatically
-    def on_kv_post(self, base_widget):
-        """Called after KV layout is created"""
-        grid = self.ids.day_ranking_grid
-        self.rows_ranking_label = []
-        self.rows_ranking_data = []
-
-        for row in range(5):
-            # Create score label
-            label_score = Factory.ScoreLabel(text=f"{row+1}. 0")
-            
-            # Create name label
-            label_name = Factory.NameLabel(text="---")
-            
-            grid.add_widget(label_score)
-            grid.add_widget(label_name)
-            
-            # Store references for later updates
-            self.rows_ranking_label.append([label_score, label_name])
-            self.rows_ranking_data.append([0, "---"])
-    
     def _show_ranking(self):
         self.ranking_view.open()
-    
-    def update_title(self, text):
-        """Updates the title label text (e.g., for win message)"""
-        self.title_label.text = text # type: ignore
 
-    def update_score(self, new_score, name):
-        """Updates the ranking logic and the specific KV labels"""
-        # Logic to update self.rows_ranking_data goes here...
-        # ...
+    def update_ranking(self, scores):
+        """Updates the top-5 score labels in the menu.
+        `scores` is expected to be a list sorted descending."""
+        score_label_ids = ['score_1', 'score_2', 'score_3', 'score_4', 'score_5']
 
-        # Update the specific labels using their IDs from KV
-        for index in range(5):
-            score_label = self.rows_ranking_label[index][0]
-            name_label = self.rows_ranking_label[index][1]
-
-            score_label.text = f"{index+1}. {self.rows_ranking_data[index][0]}"
-            name_label.text = f"{self.rows_ranking_data[index][1]}"
-
+        for i, label_id in enumerate(score_label_ids):
+            label = self.ids[label_id]
+            if i < len(scores):
+                label.text = f"{i + 1}. {scores[i]}"
+            else:
+                label.text = f"{i + 1}. ---"
 
 class Ranking(ModalView):
 
